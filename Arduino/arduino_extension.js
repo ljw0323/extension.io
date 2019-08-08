@@ -442,11 +442,7 @@
   };
   */
 
-  ext.readInput = function(name) {
-    var hw = hwList.search(name);
-    if (!hw) return;
-    return analogRead(hw.pin);
-  };
+
 
  /* ext.whenButton = function(btn, state) {
     var hw = hwList.search(btn);
@@ -464,6 +460,12 @@
     return digitalRead(hw.pin);
   };
     */
+
+  ext.readInput = function(name) {
+    var hw = hwList.search(name);
+    if (!hw) return;
+    return analogRead(hw.pin);
+  };
 
   ext.whenInput = function(name, op, val) {
     var hw = hwList.search(name);
@@ -702,6 +704,7 @@
       ['-'],  
       [' ', '%n 번 핀을 %m.outputs', 'digitalWrite', 1, '켜기'],
       [' ', '%n 번 핀의 값을 %n% 로 설정하기', 'analogWrite', 3, 100],
+      [' ', '%m.motor의 속도를 %n% 로 설정하기', 'analogWrite', 3, 100],
       ['-'],
       ['h', '%n 번 핀의 상태가 %m.outputs 일 때', 'whenDigitalRead', 1, '켜기'],
       ['b', '%n 번 핀이 켜져있는가?', 'digitalRead', 1],
@@ -999,12 +1002,13 @@
     ko: {
       buttons: ['버튼 A', '버튼 B', '버튼 C', '버튼 D'],
       btnStates: ['눌림', '떼짐'],
-      hwIn: ['회전 손잡이', '조도 센서', '온도 센서'],
+      hwIn: ['회전 손잡이', '조도 센서', '온도 센서'],  
       hwOut: ['led A', 'led B', 'led C', 'led D', '버튼 A', '버튼 B', '버튼 C', '버튼 D', '서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D'],
       leds: ['led A', 'led B', 'led C', 'led D'],
       outputs: ['켜기', '끄기'],
       ops: ['>', '=', '<'],
-      servos: ['서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D']
+      motor: ['왼쪽 바퀴 - 앞', '왼쪽 바퀴 - 뒤', '오른쪽 바퀴 - 앞', '오른쪽 바퀴 - 뒤']
+      //servos: ['서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D']
     },
     nb: {
       buttons: ['knapp A', 'knapp B', 'knapp C', 'knapp D'],
