@@ -59,7 +59,8 @@
 
   var digitalOutputData = new Uint8Array(16),
     digitalInputData = new Uint8Array(16),
-    analogInputData = new Uint16Array(16);
+    analogInputData = new Uint16Array(16),
+    servoVals = new Uint8Array(MAX_PINS);
 
   var analogChannel = new Uint8Array(MAX_PINS);
   var pinModes = [];
@@ -79,31 +80,6 @@
   var pinging = false;
   var pingCount = 0;
   var pinger = null;
-
-  var hwList = new HWList();
-
-  function HWList() {
-    this.devices = [];
-
-    this.add = function(dev, pin) {
-      var device = this.search(dev);
-      if (!device) {
-        device = {name: dev, pin: pin, val: 0};
-        this.devices.push(device);
-      } else {
-        device.pin = pin;
-        device.val = 0;
-      }
-    };
-
-    this.search = function(dev) {
-      for (var i=0; i<this.devices.length; i++) {
-        if (this.devices[i].name === dev)
-          return this.devices[i];
-      }
-      return null;
-    };
-  }
 
   function init() {
 
@@ -329,7 +305,7 @@
     device.send(msg.buffer);
   }
 
-  /*function rotateServo(pin, deg) {
+  function rotateServo(pin, deg) {
     if (!hasCapability(pin, SERVO)) {
       console.log('ERROR: valid servo pins are ' + pinModes[SERVO].join(', '));
       return;
@@ -340,33 +316,30 @@
         deg & 0x7F,
         deg >> 0x07]);
     device.send(msg.buffer);
-  }*/
-
-  ext.whenConnected = function() {
-    if (notifyConnection) return true;
-    return false;
-  };
+    servoVals[pin] = deg;
+  }
 
   ext.analogWrite = function(pin, val) {
-    analogWrite(pin, val);
+    analogWrite(parseInt(pin), val);
   };
 
   ext.digitalWrite = function(pin, val) {
     if (val == menus[lang]['outputs'][0])
-      digitalWrite(pin, HIGH);
+      digitalWrite(parseInt(pin), HIGH);
     else if (val == menus[lang]['outputs'][1])
-      digitalWrite(pin, LOW);
+      digitalWrite(parseInt(pin), LOW);
   };
 
   ext.analogRead = function(pin) {
-    return analogRead(pin);
+    return analogRead(parseInt(pin));
   };
 
   ext.digitalRead = function(pin) {
-    return digitalRead(pin);
+    return digitalRead(parseInt(pin));
   };
 
-  ext.whenAnalogRead = function(pin, op, val) {
+  ext.whenAnalogRead = function(p, op, val) {
+    var pin = parseInt(p);
     if (pin >= 0 && pin < pinModes[ANALOG].length) {
       if (op == '>')
         return analogRead(pin) > val;
@@ -379,7 +352,8 @@
     }
   };
 
-  ext.whenDigitalRead = function(pin, val) {
+  ext.whenDigitalRead = function(p, val) {
+    var pin = parseInt(p);
     if (hasCapability(pin, INPUT)) {
       if (val == menus[lang]['outputs'][0])
         return digitalRead(pin);
@@ -388,101 +362,14 @@
     }
   };
 
-  ext.connectHW = function(hw, pin) {
-    hwList.add(hw, pin);
-  };
-
-  /*ext.rotateServo = function(servo, deg) {
-    var hw = hwList.search(servo);
-    if (!hw) return;
+  ext.setServo = function(pin, deg) {
     if (deg < 0) deg = 0;
     else if (deg > 180) deg = 180;
-    rotateServo(hw.pin, deg);
-    hw.val = deg;
+    rotateServo(parseInt(pin), deg);
   };
 
-  ext.changeServo = function(servo, change) {
-    var hw = hwList.search(servo);
-    if (!hw) return;
-    var deg = hw.val + change;
-    if (deg < 0) deg = 0;
-    else if (deg > 180) deg = 180;
-    rotateServo(hw.pin, deg);
-    hw.val = deg;
-  };
-
-  ext.setLED = function(led, val) {
-    var hw = hwList.search(led);
-    if (!hw) return;
-    analogWrite(hw.pin, val);
-    hw.val = val;
-  };
- 
-
-  ext.changeLED = function(led, val) {
-    var hw = hwList.search(led);
-    if (!hw) return;
-    var b = hw.val + val;
-    if (b < 0) b = 0;
-    else if (b > 100) b = 100;
-    analogWrite(hw.pin, b);
-    hw.val = b;
-  };
-
-  ext.digitalLED = function(led, val) {
-    var hw = hwList.search(led);
-    if (!hw) return;
-    if (val == 'on') {
-      digitalWrite(hw.pin, HIGH);
-      hw.val = 255;
-    } else if (val == 'off') {
-      digitalWrite(hw.pin, LOW);
-      hw.val = 0;
-    }
-  };
-  */
-
-
-
- /* ext.whenButton = function(btn, state) {
-    var hw = hwList.search(btn);
-    if (!hw) return;
-    if (state === 'pressed')
-      return digitalRead(hw.pin);
-    else if (state === 'released')
-      return !digitalRead(hw.pin);
-  };
-
-
-  ext.isButtonPressed = function(btn) {
-    var hw = hwList.search(btn);
-    if (!hw) return;
-    return digitalRead(hw.pin);
-  };
-    */
-
-  ext.readInput = function(name) {
-    var hw = hwList.search(name);
-    if (!hw) return;
-    return analogRead(hw.pin);
-  };
-
-  ext.whenInput = function(name, op, val) {
-    var hw = hwList.search(name);
-    if (!hw) return;
-    if (op == '>')
-      return analogRead(hw.pin) > val;
-    else if (op == '<')
-      return analogRead(hw.pin) < val;
-    else if (op == '=')
-      return analogRead(hw.pin) == val;
-    else
-      return false;
-  };
-
-  ext.mapValues = function(val, aMin, aMax, bMin, bMax) {
-    var output = (((bMax - bMin) * (val - aMin)) / (aMax - aMin)) + bMin;
-    return Math.round(output);
+  ext.getServoPosition = function(pin, change) {
+    return servoVals[parseInt(pin)];
   };
 
   ext._getStatus = function() {
@@ -510,25 +397,26 @@
     device = potentialDevices.shift();
     if (!device) return;
 
-    device.open({ stopBits: 0, bitRate: 57600, ctsFlowControl: 0 });
-    console.log('Attempting connection with ' + device.id);
-    device.set_receive_handler(function(data) {
-      var inputData = new Uint8Array(data);
-      processInput(inputData);
+    device.open({ stopBits: 0, bitRate: 57600, ctsFlowControl: 0 }, function() {
+      console.log('Attempting connection with ' + device.id);
+      device.set_receive_handler(function(data) {
+        var inputData = new Uint8Array(data);
+        processInput(inputData);
+      });
+
+      poller = setInterval(function() {
+        queryFirmware();
+      }, 1000);
+
+      watchdog = setTimeout(function() {
+        clearInterval(poller);
+        poller = null;
+        device.set_receive_handler(null);
+        device.close();
+        device = null;
+        tryNextDevice();
+      }, 5000);
     });
-
-    poller = setInterval(function() {
-      queryFirmware();
-    }, 1000);
-
-    watchdog = setTimeout(function() {
-      clearInterval(poller);
-      poller = null;
-      device.set_receive_handler(null);
-      device.close();
-      device = null;
-      tryNextDevice();
-    }, 5000);
   }
 
   ext._shutdown = function() {
@@ -541,7 +429,7 @@
   // Check for GET param 'lang'
   var paramString = window.location.search.replace(/^\?|\/$/g, '');
   var vars = paramString.split("&");
-  var lang = 'ko';
+  var lang = 'en';
   for (var i=0; i<vars.length; i++) {
     var pair = vars[i].split('=');
     if (pair.length > 1 && pair[0]=='lang')
@@ -550,35 +438,30 @@
 
   var blocks = {
     en: [
-      ['h', 'when device is connected', 'whenConnected'],
-      [' ', 'connect %m.hwOut to pin %n', 'connectHW', 'led A', 3],
-      [' ', 'connect %m.hwIn to analog %n', 'connectHW', 'rotation knob', 0],
+      [' ', 'set pin %n %m.outputs', 'digitalWrite', 13, 'on'],
+      [' ', 'set pin %n to %n%', 'analogWrite', 9, 100],
+      ['h', 'when pin %n is %m.outputs', 'whenDigitalRead', 9, 'on'],
+      ['b', 'pin %n on?', 'digitalRead', 9],
       ['-'],
-      [' ', 'set %m.leds %m.outputs', 'digitalLED', 'led A', 'on'],
-      [' ', 'set %m.leds brightness to %n%', 'setLED', 'led A', 100],
-      [' ', 'change %m.leds brightness by %n%', 'changeLED', 'led A', 20],
+      ['h', 'when analog pin %n %m.ops %n%', 'whenAnalogRead', 0, '>', 50],
+      ['r', 'read analog pin %n', 'analogRead', 0],
       ['-'],
-      [' ', 'rotate %m.servos to %n degrees', 'rotateServo', 'servo A', 180],
-      [' ', 'rotate %m.servos by %n degrees', 'changeServo', 'servo A', 20],
-      ['-'],
-      ['h', 'when %m.buttons is %m.btnStates', 'whenButton', 'button A', 'pressed'],
-      ['b', '%m.buttons pressed?', 'isButtonPressed', 'button A'],
-      ['-'],
-      ['h', 'when %m.hwIn %m.ops %n%', 'whenInput', 'rotation knob', '>', 50],
-      ['r', 'read %m.hwIn', 'readInput', 'rotation knob'],
-      ['-'],
-      [' ', 'set pin %n %m.outputs', 'digitalWrite', 1, 'on'],
-      [' ', 'set pin %n to %n%', 'analogWrite', 3, 100],
-      ['-'],
-      ['h', 'when pin %n is %m.outputs', 'whenDigitalRead', 1, 'on'],
-      ['b', 'pin %n on?', 'digitalRead', 1],
-      ['-'],
-      ['h', 'when analog %n %m.ops %n%', 'whenAnalogRead', 1, '>', 50],
-      ['r', 'read analog %n', 'analogRead', 0],
-      ['-'],
-      ['r', 'map %n from %n %n to %n %n', 'mapValues', 50, 0, 100, -240, 240]
+      [' ', 'set pin %n servo to %n degrees', 'setServo', 7, 180],
+      ['r', 'pin %n servo position', 'getServoPosition', 7],
     ],
-    de: [
+    zh: [
+      [' ', '設定腳位 %n %m.outputs', 'digitalWrite', 13, '開'],
+      [' ', '設定腳位 %n 為 %n%', 'analogWrite', 9, 100],
+      ['h', '當腳位 %n 為 %m.outputs', 'whenDigitalRead', 9, '開'],
+      ['b', '腳位 %n 開?', 'digitalRead', 9],
+      ['-'],
+      ['h', '當類比 %n %m.ops %n%', 'whenAnalogRead', 0, '>', 50],
+      ['r', '讀取類比 %n', 'analogRead', 0],
+      ['-'],
+      [' ', '旋轉 %n 到 %n 度', 'setServo', 7, 180],
+      [' ', '旋轉 %n 度', 'getServoPosition', 7],
+    ]
+    /*de: [
       ['h', 'Wenn Arduino verbunden ist', 'whenConnected'],
       [' ', 'Verbinde %m.hwOut mit Pin %n', 'connectHW', 'LED A', 3],
       [' ', 'Verbinde %m.hwIn mit Analog %n', 'connectHW', 'Drehknopf', 0],
@@ -699,12 +582,21 @@
       [' ', '%m.hwOut 를 %n 번 핀에 연결하기', 'connectHW', 'led A', 3],
       [' ', '%m.hwIn 를 아날로그 %n 번 핀에 연결하기', 'connectHW', '회전 손잡이', 0],
       ['-'],
+      [' ', '%m.leds 를 %m.outputs', 'digitalLED', 'led A', '켜기'],
+      [' ', '%m.leds 의 밝기를 %n% 로 설정하기', 'setLED', 'led A', 100],
+      [' ', '%m.leds 의 밝기를 %n% 만큼 바꾸기', 'changeLED', 'led A', 20],
+      ['-'],
+      [' ', '%m.servos 를 %n 도로 회전하기', 'rotateServo', '서보모터 A', 180],
+      [' ', '%m.servos 를 %n 도 만큼 회전하기', 'changeServo', '서보모터 A', 20],
+      ['-'],
+      ['h', '%m.buttons 의 상태가 %m.btnStates 일 때', 'whenButton', '버튼 A', '눌림'],
+      ['b', '%m.buttons 가 눌려져 있는가?', 'isButtonPressed', '버튼 A'],
+      ['-'],
       ['h', '%m.hwIn 의 값이 %m.ops %n% 일 때', 'whenInput', '회전 손잡이', '>', 50],
       ['r', '%m.hwIn 의 값', 'readInput', '회전 손잡이'],
-      ['-'],  
+      ['-'],
       [' ', '%n 번 핀을 %m.outputs', 'digitalWrite', 1, '켜기'],
-      [' ', '%n 번 핀의 값을 %n 으로 설정하기', 'analogWrite', 3, 100],
-      [' ', '%m.motors 의 속도를 %n% 로 설정하기', 'analogWrite', '왼쪽 바퀴 - 앞', 100],
+      [' ', '%n 번 핀의 값을 %n% 로 설정하기', 'analogWrite', 3, 100],
       ['-'],
       ['h', '%n 번 핀의 상태가 %m.outputs 일 때', 'whenDigitalRead', 1, '켜기'],
       ['b', '%n 번 핀이 켜져있는가?', 'digitalRead', 1],
@@ -916,50 +808,19 @@
       ['r', 'leer analógico %n', 'analogRead', 0],
       ['-'],
       ['r', 'convertir %n de %n %n a %n %n', 'mapValues', 50, 0, 100, -240, 240]
-    ],
-    zh: [
-      ['h', '當裝置連接時', 'whenConnected'],
-      [' ', '連接 %m.hwOut 到腳位 %n', 'connectHW', '發光二極體 A', 3],
-      [' ', '連接 %m.hwIn 到類比 %n', 'connectHW', '旋鈕', 0],
-      ['-'],
-      [' ', '設定 %m.leds %m.outputs', 'digitalLED', '發光二極體 A', 'on'],
-      [' ', '設定 %m.leds 亮度為 %n%', 'setLED', '發光二極體 A', 100],
-      [' ', '改變 %m.leds 亮度 %n%', 'changeLED', '發光二極體 A', 20],
-      ['-'],
-      [' ', '旋轉 %m.servos 到 %n 度', 'rotateServo', '伺服馬達 A', 180],
-      [' ', '旋轉 %m.servos %n 度', 'changeServo', '伺服馬達 A', 20],
-      ['-'],
-      ['h', '當 %m.buttons 為 %m.btnStates', 'whenButton', '按鈕 A', '按下'],
-      ['b', '%m.buttons 按下?', 'isButtonPressed', '按鈕 A'],
-      ['-'],
-      ['h', '當 %m.hwIn %m.ops %n%', 'whenInput', '旋鈕', '>', 50],
-      ['r', '讀取 %m.hwIn', 'readInput', '旋鈕'],
-      ['-'],
-      [' ', '設定腳位 %n %m.outputs', 'digitalWrite', 1, '開'],
-      [' ', '設定腳位 %n 為 %n%', 'analogWrite', 3, 100],
-      ['-'],
-      ['h', '當腳位 %n 為 %m.outputs', 'whenDigitalRead', 1, '開'],
-      ['b', '腳位 %n 開?', 'digitalRead', 1],
-      ['-'],
-      ['h', '當類比 %n %m.ops %n%', 'whenAnalogRead', 1, '>', 50],
-      ['r', '讀取類比 %n', 'analogRead', 0],
-      ['-'],
-      ['r', '對應 %n 由 %n %n 為 %n %n', 'mapValues', 50, 0, 100, -240, 240]
-    ]
+    ]*/
   };
 
   var menus = {
     en: {
-      buttons: ['button A', 'button B', 'button C', 'button D'],
-      btnStates: ['pressed', 'released'],
-      hwIn: ['rotation knob', 'light sensor', 'temperature sensor'],
-      hwOut: ['led A', 'led B', 'led C', 'led D', 'button A', 'button B', 'button C', 'button D', 'servo A', 'servo B', 'servo C', 'servo D'],
-      leds: ['led A', 'led B', 'led C', 'led D'],
       outputs: ['on', 'off'],
-      ops: ['>', '=', '<'],
-      servos: ['servo A', 'servo B', 'servo C', 'servo D']
+      ops: ['>', '=', '<']
     },
-    de: {
+     zh: {
+      outputs: ['開', '關'],
+      ops: ['>', '=', '<']
+    },
+   /*de: {
       buttons: ['Taste A', 'Taste B', 'Taste C', 'Taste D'],
       btnStates: ['gedrückt', 'losgelassen'],
       hwIn: ['Drehknopf', 'Lichtsensor', 'Temperatursensor'],
@@ -1002,13 +863,12 @@
     ko: {
       buttons: ['버튼 A', '버튼 B', '버튼 C', '버튼 D'],
       btnStates: ['눌림', '떼짐'],
-      hwIn: ['회전 손잡이', '조도 센서', '온도 센서'],  
+      hwIn: ['회전 손잡이', '조도 센서', '온도 센서'],
       hwOut: ['led A', 'led B', 'led C', 'led D', '버튼 A', '버튼 B', '버튼 C', '버튼 D', '서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D'],
       leds: ['led A', 'led B', 'led C', 'led D'],
       outputs: ['켜기', '끄기'],
       ops: ['>', '=', '<'],
-      motors: ['왼쪽 바퀴 - 앞', '왼쪽 바퀴 - 뒤', '오른쪽 바퀴 - 앞', '오른쪽 바퀴 - 뒤']
-      //servos: ['서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D']
+      servos: ['서보모터 A', '서보모터 B', '서보모터 C', '서보모터 D']
     },
     nb: {
       buttons: ['knapp A', 'knapp B', 'knapp C', 'knapp D'],
@@ -1080,22 +940,13 @@
       ops: ['>', '=', '<'],
       servos: ['servo A', 'servo B', 'servo C', 'servo D']
     },
-    zh: {
-      buttons: ['按鈕 A', '按鈕 B', '按鈕 C', '按鈕 D'],
-      btnStates: ['按下', '放開'],
-      hwIn: ['旋鈕', '光感應器', '溫度感應器'],
-      hwOut: ['發光二極體 A', '發光二極體 B', '發光二極體 C', '發光二極體 D', '按鈕 A', '按鈕 B', '按鈕 C', '按鈕 D', '伺服馬達 A', '伺服馬達 B', '伺服馬達 C', '伺服馬達 D'],
-      leds: ['發光二極體 A', '發光二極體 B', '發光二極體 C', '發光二極體 D'],
-      outputs: ['開', '關'],
-      ops: ['>', '=', '<'],
-      servos: ['伺服馬達 A', '伺服馬達 B', '伺服馬達 C', '伺服馬達 D']
-    }
+*/
   };
 
   var descriptor = {
     blocks: blocks[lang],
     menus: menus[lang],
-    url: 'https://ljw0323.github.io/Arduino'
+    url: 'http://github.com/Halo0070/Arduino'
   };
 
   ScratchExtensions.register('Arduino', descriptor, ext, {type:'serial'});
