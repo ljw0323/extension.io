@@ -329,7 +329,7 @@
     device.send(msg.buffer);
   }
 
-  function rotateServo(pin, deg) {
+  /*function rotateServo(pin, deg) {
     if (!hasCapability(pin, SERVO)) {
       console.log('ERROR: valid servo pins are ' + pinModes[SERVO].join(', '));
       return;
@@ -340,7 +340,7 @@
         deg & 0x7F,
         deg >> 0x07]);
     device.send(msg.buffer);
-  }
+  }*/
 
   ext.whenConnected = function() {
     if (notifyConnection) return true;
@@ -392,7 +392,7 @@
     hwList.add(hw, pin);
   };
 
-  ext.rotateServo = function(servo, deg) {
+  /*ext.rotateServo = function(servo, deg) {
     var hw = hwList.search(servo);
     if (!hw) return;
     if (deg < 0) deg = 0;
@@ -417,6 +417,7 @@
     analogWrite(hw.pin, val);
     hw.val = val;
   };
+ 
 
   ext.changeLED = function(led, val) {
     var hw = hwList.search(led);
@@ -439,6 +440,7 @@
       hw.val = 0;
     }
   };
+  */
 
   ext.readInput = function(name) {
     var hw = hwList.search(name);
@@ -446,7 +448,7 @@
     return analogRead(hw.pin);
   };
 
-  ext.whenButton = function(btn, state) {
+ /* ext.whenButton = function(btn, state) {
     var hw = hwList.search(btn);
     if (!hw) return;
     if (state === 'pressed')
@@ -455,11 +457,13 @@
       return !digitalRead(hw.pin);
   };
 
+
   ext.isButtonPressed = function(btn) {
     var hw = hwList.search(btn);
     if (!hw) return;
     return digitalRead(hw.pin);
   };
+    */
 
   ext.whenInput = function(name, op, val) {
     var hw = hwList.search(name);
@@ -535,7 +539,7 @@
   // Check for GET param 'lang'
   var paramString = window.location.search.replace(/^\?|\/$/g, '');
   var vars = paramString.split("&");
-  var lang = 'en';
+  var lang = 'ko';
   for (var i=0; i<vars.length; i++) {
     var pair = vars[i].split('=');
     if (pair.length > 1 && pair[0]=='lang')
@@ -693,19 +697,9 @@
       [' ', '%m.hwOut 를 %n 번 핀에 연결하기', 'connectHW', 'led A', 3],
       [' ', '%m.hwIn 를 아날로그 %n 번 핀에 연결하기', 'connectHW', '회전 손잡이', 0],
       ['-'],
-      [' ', '%m.leds 를 %m.outputs', 'digitalLED', 'led A', '켜기'],
-      [' ', '%m.leds 의 밝기를 %n% 로 설정하기', 'setLED', 'led A', 100],
-      [' ', '%m.leds 의 밝기를 %n% 만큼 바꾸기', 'changeLED', 'led A', 20],
-      ['-'],
-      [' ', '%m.servos 를 %n 도로 회전하기', 'rotateServo', '서보모터 A', 180],
-      [' ', '%m.servos 를 %n 도 만큼 회전하기', 'changeServo', '서보모터 A', 20],
-      ['-'],
-      ['h', '%m.buttons 의 상태가 %m.btnStates 일 때', 'whenButton', '버튼 A', '눌림'],
-      ['b', '%m.buttons 가 눌려져 있는가?', 'isButtonPressed', '버튼 A'],
-      ['-'],
       ['h', '%m.hwIn 의 값이 %m.ops %n% 일 때', 'whenInput', '회전 손잡이', '>', 50],
       ['r', '%m.hwIn 의 값', 'readInput', '회전 손잡이'],
-      ['-'],
+      ['-'],  
       [' ', '%n 번 핀을 %m.outputs', 'digitalWrite', 1, '켜기'],
       [' ', '%n 번 핀의 값을 %n% 로 설정하기', 'analogWrite', 3, 100],
       ['-'],
@@ -1097,7 +1091,7 @@
   var descriptor = {
     blocks: blocks[lang],
     menus: menus[lang],
-    url: 'http://khanning.github.io/scratch-arduino-extension'
+    url: 'https://ljw0323.github.io/Arduino'
   };
 
   ScratchExtensions.register('Arduino', descriptor, ext, {type:'serial'});
